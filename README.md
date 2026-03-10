@@ -1,101 +1,66 @@
-# OpenClaw 一键安装与远程代装（从零到可用）
 
-> 适用人群：第一次接触 OpenClaw、不会装环境、网络/代理复杂、或需要把 OpenClaw 跑在远端服务器并远程使用。
+# OpenClaw macOS 一键安装（从零到可用）
 
-**你将得到什么**
-- 一条命令完成安装（macOS/Linux；Windows 推荐 WSL2）
-- 可验收的检查步骤（`doctor/status/health`）
-- 代理/公司网络下的“先验收再安装”流程
-- 远端常驻 Gateway（Linux VPS/家用服务器）+ 本地远程使用（SSH 隧道 / Tailscale）的标准做法
+> 适用：**macOS 为主**（Linux 同样可用）。  
+> Windows 用户强烈建议走 **WSL2**：见 `docs/windows-wsl2.md`。
 
-**官方参考（强烈建议收藏）**
-- 安装：https://docs.openclaw.ai/zh-CN/install
-- 远程访问：https://docs.openclaw.ai/gateway/remote
-- GitHub：https://github.com/openclaw/openclaw
+你将获得：
+- 一条命令完成安装 + 引导（调用官方安装器，最稳）
+- 可复制粘贴的验收命令（`doctor/status/health`）
+- 网络/代理不通时的先验收方案（避免反复失败）
+- 远端常驻 Gateway + 本地远程使用（可选）：`docs/remote-gateway.md`
 
 ---
 
-## 0. 安装前必须知道的 3 件事
+## 0) 安装前 30 秒自检（强烈建议先做）
 
-### 0.1 系统支持
-- macOS / Linux：原生支持
-- Windows：**官方建议通过 WSL2（强烈推荐）**
+### 0.1 Node 版本（硬要求）
+OpenClaw 要求 **Node.js ≥ 22**：
 
-### 0.2 硬性环境要求
-- **Node.js ≥ 22**（硬要求）
+```bash
+node -v
+```
 
-### 0.3 最常见失败原因
-1) 访问不了 `openclaw.ai` / npm / GitHub（网络/代理问题）
-2) Node 版本不够（< 22）
-3) 安装后 `openclaw` 不在 PATH（全局 npm bin 未加入 PATH）
+如果版本 < 22，请先升级 Node（推荐用 fnm/nvm 管理版本）。
 
----
-
-## 1. 代理/网络：先做“验收”，通过了再安装（强烈建议）
-
-只要这一步通过，后面成功率会大幅提升。
-
-### 1.1 macOS / Linux：网络验收
+### 0.2 网络验收（公司/校园/国内网络必做）
+先确认能访问官方安装入口和 npm：
 
 ```bash
 curl -I https://openclaw.ai
 npm ping
 ```
 
-### 1.2 Windows PowerShell：网络验收
-
-```powershell
-irm https://openclaw.ai -Method Head
-npm ping
-```
-
-**判定标准**
-- `curl/irm` 返回 200/301/302 等正常状态码（不是超时）
+通过标准：
+- `curl` 返回 200/301/302 等（不要超时）
 - `npm ping` 返回 `pong`
 
-如果失败：请先按《代理与网络排查》处理：
-- docs/proxy.md
+不通过请先处理：`docs/proxy.md`
 
 ---
 
-## 2. 一键安装（推荐路径）
+## 1) 一键安装（macOS / Linux）
 
-建议全程复制粘贴；不要跳步。
-
-### 2.1 macOS / Linux 一键安装
+> 说明：这个脚本会做 **Preflight → 调用官方安装器 → `openclaw onboard --install-daemon` → 基础健康检查**。  
+> 如果你的网络/代理没搞定，会卡在下载/安装阶段，所以请优先完成第 0 步的网络验收。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/evantop/openclaw-remote-install-kit/main/scripts/openclaw-quick-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/EvanTop/openclaw-remote-install-kit/main/scripts/openclaw-quick-install.sh | bash
 ```
 
-脚本会做：
-- 环境预检（Node 版本、连通性提示）
-- 调用官方安装器
-- 运行 `openclaw onboard --install-daemon`
-- 执行 `doctor/status/health`
-
-### 2.2 Windows（推荐 WSL2）
-
-Windows 用户请先阅读：
-- docs/windows-wsl2.md
-
-安装完成后，在 WSL2 的 Ubuntu 终端里执行与 Linux 同样的一键命令即可。
-
 ---
 
-## 3. 安装后验收（你一定要做）
+## 2) 安装后验收（必须做）
 
-### 3.1 基础验收
+复制粘贴运行：
 
 ```bash
-node -v
-openclaw --version
 openclaw doctor
 openclaw status
 openclaw health
 ```
 
-### 3.2 打开控制面板
+打开控制面板：
 
 ```bash
 openclaw dashboard
@@ -103,26 +68,72 @@ openclaw dashboard
 
 ---
 
-## 4. 两种常用部署模式（选一种就够）
+## 3) macOS 权限说明（想用“控制/录屏/语音”等能力才需要）
 
-### 模式 A：本机部署（最简单）
-- Gateway 和你电脑在同一台机器
-- 适合：个人使用、电脑经常开机
+如果你只用 WebChat/消息渠道和它对话，通常不需要额外权限。
 
-### 模式 B：远端常驻（更稳定，适合长期服务）
-- Gateway 跑在 Linux 服务器/家用主机
-- 你的电脑/手机作为远程控制端
-- 访问方式：
-  - 优先：Tailscale（推荐）
-  - 兜底：SSH 隧道转发 18789
+如果你希望 OpenClaw 在 macOS 上具备更强的设备能力（如录屏、控制、麦克风、语音唤醒等），请按系统提示在：
 
-远端模式详细：docs/remote-gateway.md
+**系统设置 → 隐私与安全性** 中为相关组件授予权限。常见可能涉及：
+- 辅助功能（Accessibility）
+- 自动化（Automation）
+- 屏幕录制（Screen Recording）
+- 麦克风（Microphone）
+- 语音识别（Speech Recognition）
+- 通知（Notifications）
+
+> 提示：权限经常是“能装好但用不了”的根因；建议第一次就把提示出现的权限都按引导授完。
 
 ---
 
-## 5. 常见问题（快速入口）
+## 4) 常见问题（快速修）
 
-- 安装后找不到 `openclaw`：docs/faq.md#openclaw-not-found
-- Node 版本不够：docs/faq.md#node-too-old
-- 网络/代理：docs/proxy.md
-- 远程访问：docs/remote-gateway.md
+### 4.1 安装后提示 `openclaw: command not found`
+通常是全局 npm 的 bin 目录不在 PATH。
+
+当前终端临时修复：
+
+```bash
+export PATH="$(npm prefix -g)/bin:$PATH"
+openclaw --version
+```
+
+如果好了，把这行写入你的 `~/.zshrc` 或 `~/.bashrc`，然后重开终端。
+
+更多见：`docs/faq.md#openclaw-not-found`
+
+### 4.2 Node 版本太低（< 22）
+见：`docs/faq.md#node-too-old`
+
+### 4.3 网络/代理导致安装失败
+先不要反复重装，先跑网络验收：
+
+```bash
+curl -I https://openclaw.ai
+npm ping
+```
+
+不通过见：`docs/proxy.md`
+
+### 4.4 远程连接/远端常驻 Gateway
+见：`docs/remote-gateway.md`
+
+---
+
+## 5) 目录说明（你仓库里有什么）
+
+- `scripts/openclaw-quick-install.sh`：macOS/Linux 一键安装脚本
+- `docs/proxy.md`：代理与网络排查（先验收再安装）
+- `docs/windows-wsl2.md`：Windows 走 WSL2 的推荐安装流程
+- `docs/remote-gateway.md`：远端常驻 Gateway + 远程访问（SSH/Tailscale 思路）
+- `docs/faq.md`：常见问题
+
+---
+
+## 6) 官方参考（权威）
+
+- 安装：https://docs.openclaw.ai/zh-CN/install  
+- 远程访问：https://docs.openclaw.ai/gateway/remote  
+- 项目主页：https://github.com/openclaw/openclaw  
+
+--- 
